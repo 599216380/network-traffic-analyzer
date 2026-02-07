@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络流量分析系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --success-color: #198754;
+            --dark-bg: #f6f7f9;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --muted-color: #6b7280;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+            --input-border: #d1d5db;
+            --table-head-bg: rgba(0,0,0,0.03);
+            --nav-hover-bg: rgba(13, 110, 253, 0.12);
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding-top: 20px;
+            z-index: 1000;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .sidebar .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar .logo h4 {
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar .nav-link {
+            color: var(--muted-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: var(--text-color);
+            background: var(--nav-hover-bg);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px 30px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .stat-card {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-card .icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 24px;
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .stat-card .label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .table {
+            color: var(--text-color);
+        }
+        
+        .table thead th {
+            background: var(--table-head-bg);
+            border-color: var(--border-color);
+            font-weight: 600;
+        }
+        
+        .table td {
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+        
+        .badge-critical { background: #dc3545; }
+        .badge-high { background: #fd7e14; }
+        .badge-medium { background: #ffc107; color: #000; }
+        .badge-low { background: #198754; }
+        
+        .upload-zone {
+            border: 2px dashed var(--input-border);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            background: rgba(13, 110, 253, 0.1);
+        }
+        
+        .upload-zone.dragover {
+            border-color: var(--primary-color);
+            background: rgba(13, 110, 253, 0.2);
+        }
+        
+        .progress-bar {
+            transition: width 0.3s;
+        }
+        
+        .filter-bar {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .form-control, .form-select {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: var(--input-bg);
+            border-color: var(--primary-color);
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: #ffffff;
+        }
+        
+        .alert-item {
+            background: var(--card-bg);
+            border-left: 4px solid;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .alert-item.critical { border-color: #dc3545; }
+        .alert-item.high { border-color: #fd7e14; }
+        .alert-item.medium { border-color: #ffc107; }
+        .alert-item.low { border-color: #198754; }
+        
+        .flow-detail {
+            background: var(--input-bg);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .protocol-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .protocol-tcp { background: rgba(13, 110, 253, 0.2); color: #0d6efd; }
+        .protocol-udp { background: rgba(25, 135, 84, 0.2); color: #198754; }
+        .protocol-icmp { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        
+        #page-content > div {
+            display: none;
+        }
+        
+        #page-content > div.active {
+            display: block;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        /* Modal 主题适配 */
+        .modal-content {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .btn-close {
+            filter: var(--bs-btn-close-filter, none);
+        }
+
+        html.theme-light .btn-close {
+            filter: none;
+        }
+
+        /* 文本静音色 */
+        .text-muted {
+            color: var(--muted-color) !important;
+        }
+
+        /* List group 主题适配 */
+        .list-group-item {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        /* 按钮链接 */
+        .btn-link {
+            color: var(--text-color);
+        }
+
+        .btn-link:hover {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <h4><i class="bi bi-shield-check"></i> 流量分析</h4>
+        </div>
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="#" data-page="dashboard">
+                <i class="bi bi-speedometer2"></i> 仪表盘
+            </a>
+            <a class="nav-link" href="#" data-page="datasets">
+                <i class="bi bi-folder2-open"></i> 数据集
+            </a>
+            <a class="nav-link" href="#" data-page="flows">
+                <i class="bi bi-diagram-3"></i> 流量查询
+            </a>
+            <a class="nav-link" href="#" data-page="dns">
+                <i class="bi bi-globe"></i> DNS事件
+            </a>
+            <a class="nav-link" href="#" data-page="alerts">
+                <i class="bi bi-exclamation-triangle"></i> 安全告警
+            </a>
+            <a class="nav-link" href="#" data-page="rules">
+                <i class="bi bi-gear"></i> 检测规则
+            </a>
+        </nav>
+        
+        <!-- 用户信息 -->
+        <div class="sidebar-footer" style="position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px; border-top: 1px solid var(--border-color); background: var(--card-bg);">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 500; font-size: 14px;" id="display-username">管理员</div>
+                        <div style="font-size: 12px; color: var(--muted-color);">admin</div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="logout()" title="退出登录">
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div id="page-content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="active">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">仪表盘</h3>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="dashboard-dataset" style="width: 220px;">
+                            <option value="">所有数据集</option>
+                        </select>
+                        <button class="btn btn-outline-primary" type="button" onclick="loadDashboard()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="icon" style="background: rgba(13, 110, 253, 0.2);">
+                                <i class="bi bi-folder text-primary"></i>
+                            </div>
+                            <div class="value" id="stat-datasets">0</div>
+                            <div class="label">数据集</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="icon" style="background: rgba(25, 135, 84, 0.2);">
+                                <i class="bi bi-arrow-left-right text-success"></i>
+                            </div>
+                            <div class="value" id="stat-flows">0</div>
+                            <div class="label">总会话</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="icon" style="background: rgba(111, 66, 193, 0.2);">
+                                <i class="bi bi-hdd-network" style="color: #6f42c1;"></i>
+                            </div>
+                            <div class="value" id="stat-bytes">0 MB</div>
+                            <div class="label">总流量</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="icon" style="background: rgba(220, 53, 69, 0.2);">
+                                <i class="bi bi-exclamation-triangle text-danger"></i>
+                            </div>
+                            <div class="value" id="stat-alerts">0</div>
+                            <div class="label">安全告警</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-4">
+                    <!-- Protocol Distribution -->
+                    <div class="col-md-6">
+                        <div class="card p-4">
+                            <h5 class="mb-3">协议分布</h5>
+                            <div id="protocol-stats"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alert by Type -->
+                    <div class="col-md-6">
+                        <div class="card p-4">
+                            <h5 class="mb-3">告警分布</h5>
+                            <div id="alert-stats"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top IPs -->
+                    <div class="col-md-6">
+                        <div class="card p-4">
+                            <h5 class="mb-3">Top 源IP</h5>
+                            <div id="top-src-ips"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Domains -->
+                    <div class="col-md-6">
+                        <div class="card p-4">
+                            <h5 class="mb-3">Top 域名</h5>
+                            <div id="top-domains"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Datasets Page -->
+            <div id="page-datasets">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>数据集管理</h3>
+                    <button class="btn btn-primary" onclick="showUploadModal()">
+                        <i class="bi bi-upload"></i> 导入PCAP
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>名称</th>
+                                    <th>文件</th>
+                                    <th>大小</th>
+                                    <th>状态</th>
+                                    <th>会话数</th>
+                                    <th>时间范围</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="datasets-table">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Flows Page -->
+            <div id="page-flows">
+                <h3 class="mb-4">流量查询</h3>
+                
+                <div class="filter-bar">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <select class="form-select" id="flow-dataset">
+                                <option value="">所有数据集</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control" id="flow-src-ip" placeholder="源IP">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control" id="flow-dst-ip" placeholder="目的IP">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="flow-dst-port" placeholder="目的端口">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="flow-protocol">
+                                <option value="">所有协议</option>
+                                <option value="6">TCP</option>
+                                <option value="17">UDP</option>
+                                <option value="1">ICMP</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" onclick="searchFlows()">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>源</th>
+                                    <th>目的</th>
+                                    <th>协议</th>
+                                    <th>包数</th>
+                                    <th>字节</th>
+                                    <th>状态</th>
+                                    <th>应用</th>
+                                </tr>
+                            </thead>
+                            <tbody id="flows-table">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center">
+                        <span id="flows-count">共 0 条</span>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0" id="flows-pagination">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DNS Page -->
+            <div id="page-dns">
+                <h3 class="mb-4">DNS事件</h3>
+                
+                <div class="filter-bar">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <select class="form-select" id="dns-dataset">
+                                <option value="">所有数据集</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="dns-query-name" placeholder="域名">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="dns-query-type">
+                                <option value="">所有类型</option>
+                                <option value="A">A</option>
+                                <option value="AAAA">AAAA</option>
+                                <option value="CNAME">CNAME</option>
+                                <option value="MX">MX</option>
+                                <option value="TXT">TXT</option>
+                                <option value="NS">NS</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="dns-response-code">
+                                <option value="">所有响应</option>
+                                <option value="NOERROR">NOERROR</option>
+                                <option value="NXDOMAIN">NXDOMAIN</option>
+                                <option value="SERVFAIL">SERVFAIL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" onclick="searchDns()">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>源IP</th>
+                                    <th>域名</th>
+                                    <th>类型</th>
+                                    <th>响应码</th>
+                                    <th>熵值</th>
+                                    <th>层级</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dns-table">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Alerts Page -->
+            <div id="page-alerts">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>安全告警</h3>
+                    <div>
+                        <select class="form-select d-inline-block w-auto" id="alert-severity-filter" onchange="loadAlerts()">
+                            <option value="">所有严重程度</option>
+                            <option value="critical">严重</option>
+                            <option value="high">高</option>
+                            <option value="medium">中</option>
+                            <option value="low">低</option>
+                        </select>
+                        <select class="form-select d-inline-block w-auto ms-2" id="alert-type-filter" onchange="loadAlerts()">
+                            <option value="">所有类型</option>
+                            <option value="port_scan">端口扫描</option>
+                            <option value="brute_force">暴力破解</option>
+                            <option value="dns_tunnel">DNS隧道</option>
+                            <option value="c2_beacon">C2通信</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="alerts-list">
+                </div>
+            </div>
+            
+            <!-- Rules Page -->
+            <div id="page-rules">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">检测规则配置</h3>
+                    <button class="btn btn-primary" id="btn-add-rule">
+                        <i class="bi bi-plus-circle"></i> 新增规则
+                    </button>
+                </div>
+                <div id="rules-list" class="row g-4">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upload Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">导入PCAP文件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">数据集名称</label>
+                        <input type="text" class="form-control" id="upload-name" placeholder="可选，默认使用文件名">
+                    </div>
+                    <div class="upload-zone" id="upload-zone">
+                        <i class="bi bi-cloud-upload" style="font-size: 48px; color: #6c757d;"></i>
+                        <p class="mt-3 mb-0">点击或拖拽文件到此处</p>
+                        <small class="text-muted">支持 .pcap, .pcapng 格式</small>
+                        <input type="file" id="upload-file" accept=".pcap,.pcapng,.cap" style="display: none;">
+                    </div>
+                    <div id="upload-progress" class="mt-3" style="display: none;">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span id="upload-filename"></span>
+                            <span id="upload-percent">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" id="upload-progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="upload-btn" onclick="uploadPcap()">
+                        <i class="bi bi-upload"></i> 上传
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset Detail Modal -->
+    <div class="modal fade" id="datasetDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">数据集详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card p-3 h-100">
+                                <h6 class="mb-3">基本信息</h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>名称</span>
+                                    <span id="detail-name">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>文件</span>
+                                    <span id="detail-filename">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>状态</span>
+                                    <span id="detail-status">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>大小</span>
+                                    <span id="detail-size">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>创建时间</span>
+                                    <span id="detail-created">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>时间范围</span>
+                                    <span id="detail-time-range">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card p-3 h-100">
+                                <h6 class="mb-3">统计信息</h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>会话数</span>
+                                    <span id="detail-flows">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>包数</span>
+                                    <span id="detail-packets">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>总流量</span>
+                                    <span id="detail-bytes">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>唯一IP数</span>
+                                    <span id="detail-unique-ips">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <div class="card p-3 h-100">
+                                <h6 class="mb-3">协议分布</h6>
+                                <div id="detail-protocols"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 h-100">
+                                <h6 class="mb-3">Top 源IP</h6>
+                                <div id="detail-top-talkers"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 h-100">
+                                <h6 class="mb-3">Top 目的端口</h6>
+                                <div id="detail-top-ports"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Rule Modal -->
+    <div class="modal fade" id="addRuleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新增检测规则</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">规则ID</label>
+                        <input type="text" class="form-control" id="new-rule-id" placeholder="例如: custom_rule_1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">规则名称</label>
+                        <input type="text" class="form-control" id="new-rule-name" placeholder="例如: 自定义检测规则">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea class="form-control" id="new-rule-description" rows="3" placeholder="规则描述"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">告警类型</label>
+                        <select class="form-select" id="new-rule-alert-type">
+                            <option value="port_scan">端口扫描</option>
+                            <option value="brute_force">暴力破解</option>
+                            <option value="dns_tunnel">DNS隧道</option>
+                            <option value="c2_beacon">C2信标</option>
+                            <option value="suspicious_dns">可疑DNS</option>
+                            <option value="anomaly">异常行为</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">严重程度</label>
+                        <select class="form-select" id="new-rule-severity">
+                            <option value="low">低</option>
+                            <option value="medium" selected>中</option>
+                            <option value="high">高</option>
+                            <option value="critical">严重</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="new-rule-enabled" checked>
+                            <label class="form-check-label" for="new-rule-enabled">启用规则</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="addRule()">
+                        <i class="bi bi-plus-circle"></i> 添加
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
